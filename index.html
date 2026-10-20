@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalorien-Tracker</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #111; background: #fff; }
+  textarea { width: 100%; box-sizing: border-box; padding: 10px; font: inherit; border: 1px solid #ccc; border-radius: 6px; }
+  button { margin-top: 8px; padding: 10px 16px; border: 0; border-radius: 6px; background: #111; color: #fff; font: inherit; cursor: pointer; }
+  button:disabled { opacity: .5; }
+  .total { background: #f2f2f2; padding: 12px 16px; border-radius: 6px; margin: 24px 0; }
+  .entry { border: 1px solid #ddd; border-radius: 6px; padding: 12px 16px; margin-bottom: 12px; }
+  .err { color: #c00; }
+  .small { font-size: 14px; }
+  .link { background: none; color: #666; text-decoration: underline; padding: 0; }
+</style>
+</head>
+<body>
+<h1>Kalorien-Tracker</h1>
+<textarea id="text" rows="3" placeholder="z. B. 2 Eier, Toast mit Butter, Cappuccino"></textarea>
+<button id="go">Analysieren</button>
+<p id="error" class="err"></p>
+<div class="total"><strong>Heute gesamt</strong><div id="total"></div></div>
+<div id="entries"></div>
+<button id="reset" class="link">Tag zurücksetzen</button>
+
+<script>
+const KEY = "kalorien-" + new Date().toLocaleDateString("sv-SE");
+let entries = [];
+try { entries = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) {}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch (e) {} }
+function sum(k) {
+  return Math.round(entries.flatMap(e => e.items).reduce((s, i) => s + (Number(i[k]) || 0), 0));
+}
+
+function render() {
+  document.getElementById("total").textContent =
+    sum("kcal") + " kcal | Protein " + sum("protein") + " g | Kohlenhydrate " +
+    sum("kohlenhydrate") + " g | Fett " + sum("fett") + " g";
+  document.getElementById("entries").innerHTML = entries.map(e => `
+    <div class="entry">
+      <strong>${esc(e.text)}</strong>
+      <ul class="small">${e.items.map(i =>
+        `<li>${esc(i.name)} (${esc(i.menge)}): ${esc(i.kcal)} kcal, P ${esc(i.protein)} g, KH ${esc(i.kohlenhydrate)} g, F ${esc(i.fett)} g</li>`
+      ).join("")}</ul>
+      <em class="small">Tipps:</em>
+      <ul class="small">${e.tipps.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+    </div>`).join("");
+}
+
+document.getElementById("go").onclick = async () => {
+  const box = document.getElementById("text");
+  const btn = document.getElementById("go");
+  const err = document.getElementById("error");
+  const text = box.value.trim();
+  if (!text) return;
+  btn.disabled = true;
+  btn.textContent = "Analysiere...";
+  err.textContent = "";
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Fehler");
+    entries.push({ id: Date.now(), text, items: data.items, tipps: data.tipps });
+    save();
+    render();
+    box.value = "";
+  } catch (e) {
+    err.textContent = e.message;
+  }
+  btn.disabled = false;
+  btn.textContent = "Analysieren";
+};
+
+document.getElementById("reset").onclick = () => { entries = []; save(); render(); };
+render();
+</script>
+</body>
+</html>
