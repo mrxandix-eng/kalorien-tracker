@@ -3,60 +3,266 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a0a0b">
 <title>Kalorien-Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #111; background: #fff; }
-  textarea { width: 100%; box-sizing: border-box; padding: 10px; font: inherit; border: 1px solid #ccc; border-radius: 6px; }
-  button { margin-top: 8px; padding: 10px 16px; border: 0; border-radius: 6px; background: #111; color: #fff; font: inherit; cursor: pointer; }
-  button:disabled { opacity: .5; }
-  .total { background: #f2f2f2; padding: 12px 16px; border-radius: 6px; margin: 24px 0; }
-  .entry { border: 1px solid #ddd; border-radius: 6px; padding: 12px 16px; margin-bottom: 12px; }
-  .err { color: #c00; }
-  .small { font-size: 14px; }
-  .link { background: none; color: #666; text-decoration: underline; padding: 0; }
+  :root {
+    --bg: #0a0a0b;
+    --card: #141416;
+    --line: #26262b;
+    --text: #f5f5f2;
+    --muted: #9b9ba3;
+    --accent: #c8ff2e;
+    --protein: #c8ff2e;
+    --carbs: #35d0ff;
+    --fat: #ff8a1f;
+    --over: #ff4d3d;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Barlow", system-ui, sans-serif;
+    color: var(--text);
+    background: radial-gradient(900px 420px at 85% -10%, rgba(200, 255, 46, .13), transparent 60%), var(--bg);
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 56px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  h1 {
+    margin: 0;
+    font: italic 800 36px/1 "Barlow Condensed", "Arial Narrow", sans-serif;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+  }
+  h1 span { color: var(--accent); }
+  .date { font: 600 13px "Barlow Condensed", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+
+  .summary { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .ringbox { position: relative; width: 170px; height: 170px; flex: none; margin: 0 auto; }
+  .ringbox svg { width: 100%; height: 100%; }
+  .track { fill: none; stroke: #222226; stroke-width: 14; }
+  .arc {
+    fill: none; stroke: var(--accent); stroke-width: 14; stroke-linecap: round;
+    transition: stroke-dashoffset .6s ease, stroke .3s;
+  }
+  .arc.over { stroke: var(--over); }
+  .ringtext { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .big { font: italic 800 48px/1 "Barlow Condensed", sans-serif; }
+  .unit { margin-top: 4px; font: 600 12px "Barlow Condensed", sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .side { flex: 1; min-width: 160px; }
+  .remaining { font-size: 18px; margin-bottom: 14px; }
+  .remaining strong { font: italic 800 30px "Barlow Condensed", sans-serif; color: var(--accent); }
+  .goal { display: flex; align-items: center; gap: 8px; font: 600 14px "Barlow Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .goal input {
+    width: 92px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: #0f0f11; color: var(--text); font: 600 16px "Barlow", sans-serif;
+  }
+  .goal input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 12px 0; }
+  .macro { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+  .macro .label { font: 700 13px "Barlow Condensed", sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--c); }
+  .macro .val { margin: 4px 0 8px; font: italic 800 26px/1 "Barlow Condensed", sans-serif; }
+  .macro .val small { font: 600 14px "Barlow Condensed", sans-serif; color: var(--muted); }
+  .macro .bar { height: 6px; border-radius: 3px; background: #222226; overflow: hidden; }
+  .macro .bar i { display: block; height: 100%; width: 0; background: var(--c); border-radius: 3px; transition: width .5s ease; }
+  .macro .share { margin-top: 6px; font-size: 12px; color: var(--muted); }
+
+  .input .h { display: block; margin-bottom: 8px; font: italic 800 20px "Barlow Condensed", sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+  textarea {
+    width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--line);
+    background: #0f0f11; color: var(--text); font: 500 16px "Barlow", sans-serif; resize: vertical;
+  }
+  textarea::placeholder { color: #5e5e66; }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .go {
+    width: 100%; margin-top: 10px; padding: 14px; border: 0; border-radius: 12px;
+    background: var(--accent); color: #0a0a0b;
+    font: italic 800 22px/1 "Barlow Condensed", sans-serif; letter-spacing: .06em; text-transform: uppercase;
+    cursor: pointer; transition: transform .1s, filter .2s;
+  }
+  .go:hover { filter: brightness(1.08); }
+  .go:active { transform: scale(.98); }
+  .go:disabled { opacity: .5; cursor: wait; }
+  .go:focus-visible, .del:focus-visible, .reset:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .err { min-height: 1em; margin: 10px 0 0; color: var(--over); font-size: 14px; }
+
+  .sec { margin: 24px 0 10px; font: 700 15px "Barlow Condensed", sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  .empty { padding: 28px 16px; border: 1px dashed var(--line); border-radius: 16px; text-align: center; color: var(--muted); }
+
+  .entry { margin-bottom: 12px; }
+  .entry-head { display: flex; align-items: center; gap: 10px; }
+  .time { font: 600 13px "Barlow Condensed", sans-serif; letter-spacing: .1em; color: var(--muted); }
+  .badge { padding: 2px 10px; border-radius: 999px; background: rgba(200, 255, 46, .12); color: var(--accent); font: 700 14px "Barlow Condensed", sans-serif; letter-spacing: .04em; }
+  .del { margin-left: auto; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; }
+  .del:hover { background: #222226; color: var(--text); }
+  .said { margin: 8px 0 10px; font-weight: 600; }
+  .items { list-style: none; margin: 0; padding: 0; }
+  .items li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .name { display: block; font-weight: 600; }
+  .menge { display: block; color: var(--muted); font-size: 12px; }
+  .nums { text-align: right; white-space: nowrap; }
+  .nums b { display: block; font: 700 16px "Barlow Condensed", sans-serif; letter-spacing: .02em; }
+  .nums span { color: var(--muted); font-size: 12px; }
+  .tips { list-style: none; margin: 10px 0 0; padding: 10px 12px; border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; background: rgba(200, 255, 46, .06); font-size: 14px; color: #d8d8d4; }
+  .tips li { padding: 2px 0; }
+  .tips li::before { content: "\26A1  "; }
+
+  .reset { display: block; margin: 20px auto 0; padding: 6px; border: 0; background: none; color: var(--muted); font: 500 14px "Barlow", sans-serif; text-decoration: underline; cursor: pointer; }
+
+  @media (max-width: 400px) {
+    .macro .val { font-size: 22px; }
+    h1 { font-size: 30px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .arc, .macro .bar i, .go { transition: none; }
+  }
 </style>
 </head>
 <body>
-<h1>Kalorien-Tracker</h1>
-<textarea id="text" rows="3" placeholder="z. B. 2 Eier, Toast mit Butter, Cappuccino"></textarea>
-<button id="go">Analysieren</button>
-<p id="error" class="err"></p>
-<div class="total"><strong>Heute gesamt</strong><div id="total"></div></div>
-<div id="entries"></div>
-<button id="reset" class="link">Tag zurücksetzen</button>
+<div class="wrap">
+  <header>
+    <h1>Kalorien<span>Tracker</span></h1>
+    <div class="date" id="date"></div>
+  </header>
+
+  <section class="card summary">
+    <div class="ringbox">
+      <svg viewBox="0 0 180 180" aria-hidden="true">
+        <circle class="track" cx="90" cy="90" r="76"></circle>
+        <circle class="arc" id="ring" cx="90" cy="90" r="76" transform="rotate(-90 90 90)"></circle>
+      </svg>
+      <div class="ringtext">
+        <div class="big" id="kcal">0</div>
+        <div class="unit">kcal heute</div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="remaining" id="remaining"></div>
+      <label class="goal">Tagesziel
+        <input type="number" id="goal" min="500" max="10000" step="50" inputmode="numeric">
+        kcal
+      </label>
+    </div>
+  </section>
+
+  <section class="macros">
+    <div class="macro" style="--c: var(--protein)">
+      <div class="label">Protein</div>
+      <div class="val"><span id="m-protein">0</span> <small>g</small></div>
+      <div class="bar"><i id="b-protein"></i></div>
+      <div class="share" id="s-protein">0 %</div>
+    </div>
+    <div class="macro" style="--c: var(--carbs)">
+      <div class="label">Kohlenhydrate</div>
+      <div class="val"><span id="m-carbs">0</span> <small>g</small></div>
+      <div class="bar"><i id="b-carbs"></i></div>
+      <div class="share" id="s-carbs">0 %</div>
+    </div>
+    <div class="macro" style="--c: var(--fat)">
+      <div class="label">Fett</div>
+      <div class="val"><span id="m-fat">0</span> <small>g</small></div>
+      <div class="bar"><i id="b-fat"></i></div>
+      <div class="share" id="s-fat">0 %</div>
+    </div>
+  </section>
+
+  <section class="card input">
+    <label for="text" class="h">Was hast du gegessen?</label>
+    <textarea id="text" rows="3" placeholder="z. B. 2 Eier, Toast mit Butter, Cappuccino"></textarea>
+    <button id="go" class="go">Analysieren</button>
+    <p id="error" class="err" role="alert"></p>
+  </section>
+
+  <h2 class="sec">Heutige Mahlzeiten</h2>
+  <div id="entries"></div>
+  <button id="reset" class="reset">Tag zurücksetzen</button>
+</div>
 
 <script>
+const $ = id => document.getElementById(id);
 const KEY = "kalorien-" + new Date().toLocaleDateString("sv-SE");
+const GOAL_KEY = "kalorien-ziel";
+const CIRC = 2 * Math.PI * 76;
+
 let entries = [];
+let goal = 2200;
 try { entries = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) {}
+if (!Array.isArray(entries)) entries = [];
+try { goal = Number(localStorage.getItem(GOAL_KEY)) || 2200; } catch (e) {}
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch (e) {} }
+function num(v) { return Number(v) || 0; }
 function sum(k) {
-  return Math.round(entries.flatMap(e => e.items).reduce((s, i) => s + (Number(i[k]) || 0), 0));
+  return Math.round(entries.flatMap(e => e.items || []).reduce((s, i) => s + num(i[k]), 0));
+}
+
+const ring = $("ring");
+ring.style.strokeDasharray = CIRC;
+$("date").textContent = new Date().toLocaleDateString("de-AT", { weekday: "long", day: "numeric", month: "long" });
+$("goal").value = goal;
+
+function entryHtml(e) {
+  const items = e.items || [];
+  const total = Math.round(items.reduce((s, i) => s + num(i.kcal), 0));
+  const time = new Date(e.id).toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" });
+  const tips = e.tipps || [];
+  return `
+    <article class="card entry">
+      <div class="entry-head">
+        <span class="time">${esc(time)}</span>
+        <span class="badge">${total} kcal</span>
+        <button class="del" data-id="${esc(e.id)}" aria-label="Eintrag löschen">&#10005;</button>
+      </div>
+      <p class="said">${esc(e.text)}</p>
+      <ul class="items">${items.map(i => `
+        <li>
+          <div><span class="name">${esc(i.name)}</span><span class="menge">${esc(i.menge)}</span></div>
+          <div class="nums"><b>${esc(i.kcal)} kcal</b><span>P ${esc(i.protein)} g · KH ${esc(i.kohlenhydrate)} g · F ${esc(i.fett)} g</span></div>
+        </li>`).join("")}</ul>
+      ${tips.length ? `<ul class="tips">${tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+    </article>`;
 }
 
 function render() {
-  document.getElementById("total").textContent =
-    sum("kcal") + " kcal | Protein " + sum("protein") + " g | Kohlenhydrate " +
-    sum("kohlenhydrate") + " g | Fett " + sum("fett") + " g";
-  document.getElementById("entries").innerHTML = entries.map(e => `
-    <div class="entry">
-      <strong>${esc(e.text)}</strong>
-      <ul class="small">${e.items.map(i =>
-        `<li>${esc(i.name)} (${esc(i.menge)}): ${esc(i.kcal)} kcal, P ${esc(i.protein)} g, KH ${esc(i.kohlenhydrate)} g, F ${esc(i.fett)} g</li>`
-      ).join("")}</ul>
-      <em class="small">Tipps:</em>
-      <ul class="small">${e.tipps.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
-    </div>`).join("");
+  const kcal = sum("kcal"), p = sum("protein"), c = sum("kohlenhydrate"), f = sum("fett");
+  const pct = goal > 0 ? Math.min(kcal / goal, 1) : 0;
+  const over = goal > 0 && kcal > goal;
+
+  ring.style.strokeDashoffset = CIRC * (1 - pct);
+  ring.classList.toggle("over", over);
+  $("kcal").textContent = kcal;
+  $("remaining").innerHTML = over
+    ? "<strong>" + (kcal - goal) + "</strong> kcal über dem Ziel"
+    : "Noch <strong>" + Math.max(goal - kcal, 0) + "</strong> kcal übrig";
+
+  const macroKcal = p * 4 + c * 4 + f * 9;
+  [["protein", p, 4], ["carbs", c, 4], ["fat", f, 9]].forEach(([id, grams, factor]) => {
+    const share = macroKcal ? Math.round(grams * factor / macroKcal * 100) : 0;
+    $("m-" + id).textContent = grams;
+    $("b-" + id).style.width = share + "%";
+    $("s-" + id).textContent = share + " % der Makro-Kalorien";
+  });
+
+  $("entries").innerHTML = entries.length
+    ? entries.slice().reverse().map(entryHtml).join("")
+    : '<div class="empty">Noch nichts eingetragen. Los geht es mit deiner ersten Mahlzeit.</div>';
 }
 
-document.getElementById("go").onclick = async () => {
-  const box = document.getElementById("text");
-  const btn = document.getElementById("go");
-  const err = document.getElementById("error");
+$("go").onclick = async () => {
+  const box = $("text");
+  const btn = $("go");
+  const err = $("error");
   const text = box.value.trim();
   if (!text) return;
   btn.disabled = true;
@@ -81,7 +287,31 @@ document.getElementById("go").onclick = async () => {
   btn.textContent = "Analysieren";
 };
 
-document.getElementById("reset").onclick = () => { entries = []; save(); render(); };
+$("text").addEventListener("keydown", ev => {
+  if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") $("go").click();
+});
+
+$("entries").addEventListener("click", ev => {
+  const btn = ev.target.closest(".del");
+  if (!btn) return;
+  entries = entries.filter(e => String(e.id) !== btn.dataset.id);
+  save();
+  render();
+});
+
+$("goal").addEventListener("change", ev => {
+  const v = Number(ev.target.value);
+  if (v >= 500 && v <= 10000) {
+    goal = v;
+    try { localStorage.setItem(GOAL_KEY, String(v)); } catch (e) {}
+  } else {
+    ev.target.value = goal;
+  }
+  render();
+});
+
+$("reset").onclick = () => { entries = []; save(); render(); };
+
 render();
 </script>
 </body>
